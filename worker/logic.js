@@ -111,7 +111,7 @@ export default {
     if (path === '/mcp' && request.method === 'POST') return handleMcp(request, env);
     if (path === '/' || path === '/index.html') return new Response(PAGE_HTML, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
     if (path === '/food-catalog.js') return new Response(FOOD_CATALOG_JS, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
-    if (path === '/chinese-dishes.js') return new Response(CHINESE_DISHES_JS, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
+    if (path === '/chinese-dishes.js') return new Response(CHINESE_DISHES_JS, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store' } });
     if (path === '/food-all.js') return new Response(FOOD_ALL_JS, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
     if (!path.startsWith('/api/')) return new Response('Not found', { status: 404 });
     if (!request.headers.get('oai-authenticated-user-id')) return responseJson({ error: '请登录后使用云端报告' }, 401);
@@ -132,4 +132,3 @@ export default {
     } catch (error) { return responseJson({ error: `请求失败：${error.message}` }, 500); }
   }
 };
-

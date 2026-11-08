@@ -31,8 +31,8 @@ function foodGroups(meal) {
   const s = String(meal.name || '').toLowerCase();
   const category = String(meal.category || '');
   return {
-    produce: /蔬菜|水果/.test(category) || /苹果|香蕉|橙|柑|橘|梨|草莓|蓝莓|葡萄|猕猴桃|芒果|菠萝|西瓜|桃|樱桃|李子|木瓜|石榴|西兰花|菜花|花菜|包菜|白菜|生菜|菠菜|番茄|西红柿|黄瓜|胡萝卜|芹菜|茄子|南瓜|青椒|甜椒|洋葱|蘑菇|蔬菜|沙拉|apple|banana|orange|pear|berry|grape|kiwi|mango|pineapple|watermelon|peach|cherry|plum|papaya|pomegranate|broccoli|lettuce|spinach|tomato|cucumber|carrot|celery|eggplant|pepper|vegetable|salad/.test(s),
-    protein: /蛋白质/.test(category) || /鸡蛋|鸭蛋|炒蛋|蛋花|蛋羹|鸡肉|鸡胸|鸡腿|火鸡|鸭肉|猪肉|牛肉|肉丝|肉末|鱼|虾|豆腐|豆类|扁豆|芸豆|egg|chicken|turkey|duck|pork|beef|fish|salmon|shrimp|tofu|bean|lentil/.test(s)
+    produce: /蔬菜|水果|火锅麻辣烫/.test(category) || /苹果|香蕉|橙|柑|橘|梨|草莓|蓝莓|葡萄|猕猴桃|芒果|菠萝|西瓜|桃|樱桃|李子|木瓜|石榴|西兰花|菜花|花菜|包菜|白菜|生菜|菠菜|番茄|西红柿|黄瓜|胡萝卜|芹菜|茄子|南瓜|青椒|甜椒|洋葱|蘑菇|蔬菜|沙拉|apple|banana|orange|pear|berry|grape|kiwi|mango|pineapple|watermelon|peach|cherry|plum|papaya|pomegranate|broccoli|lettuce|spinach|tomato|cucumber|carrot|celery|eggplant|pepper|vegetable|salad/.test(s),
+    protein: /蛋白质|火锅麻辣烫/.test(category) || /鸡蛋|鸭蛋|炒蛋|蛋花|蛋羹|鸡肉|鸡胸|鸡腿|火鸡|鸭肉|猪肉|牛肉|肉丝|肉末|汉堡|鸡块|鸡翅|鱼|虾|豆腐|豆类|扁豆|芸豆|egg|chicken|turkey|duck|pork|beef|fish|salmon|shrimp|tofu|bean|lentil/.test(s)
   };
 }
 function makeReport(date, state) {

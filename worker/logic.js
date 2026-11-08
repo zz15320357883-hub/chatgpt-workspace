@@ -58,15 +58,18 @@ function makeReport(date, state) {
   if (waterGoal && water !== null && water < waterGoal) observations.push(`昨天记录饮水 ${Math.round(water)} 毫升，低于你设置的 ${Math.round(waterGoal)} 毫升参考值。`);
   const goals = [];
   if (goal) goals.push(`摄入参考：${Math.round(goal)} 千卡（你自行设定）`);
+  if (number(plan.targetWeight)) goals.push(`阶段体重目标：${number(plan.targetWeight)} 公斤${plan.targetDate ? `，目标日期 ${plan.targetDate}` : ''}`);
   if (waterGoal) goals.push(`饮水参考：${Math.round(waterGoal)} 毫升（你自行设定）`);
   if (number(plan.exercise)) goals.push(`活动目标：${Math.round(number(plan.exercise))} 分钟`);
   if (number(plan.sleep)) goals.push(`睡眠目标：${number(plan.sleep)} 小时`);
   if (!goals.length) goals.push('你还没有设置个人目标。可在“我的健康计划”中填写适合自己的参考值。');
-  const mealIdeas = [
+  const defaultMealIdeas = [
     '早餐：燕麦或全麦面包，搭配鸡蛋或原味酸奶，再加一份水果。',
     '午餐：米饭或杂粮，搭配鸡肉、鱼或豆腐，再加足量蔬菜。',
     '晚餐：蔬菜、豆类或鱼肉，搭配适量主食；按食欲和实际份量记录。'
   ];
+  const customMealIdeas = typeof plan.mealPlan === 'string' ? plan.mealPlan.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 8) : [];
+  const mealIdeas = customMealIdeas.length ? customMealIdeas : defaultMealIdeas;
   return { date, yesterday, mealCount: meals.length, totalKcal: total, observations, goals, mealIdeas, generatedAt: new Date().toISOString(), sourceUpdatedAt: state?.updatedAt || null, note: '仅根据已记录的食物名称、热量和个人目标生成，无法判断营养素、盐糖含量或诊断健康问题。饮食建议参考 WHO 和 USDA MyPlate 的一般原则。' };
 }
 async function generateReport(env, date = chinaDate()) {
@@ -127,3 +130,4 @@ export default {
     } catch (error) { return responseJson({ error: `请求失败：${error.message}` }, 500); }
   }
 };
+

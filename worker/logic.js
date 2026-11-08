@@ -4,6 +4,25 @@ const CHINESE_DISHES_JS = __CHINESE_DISHES_JS__;
 const FOOD_ALL_JS = __FOOD_ALL_JS__;
 const STATE_KEY = 'owner/health-state-v1.json';
 const TZ = 'Asia/Shanghai';
+const REPORT_VERSION = 'chinese-meals-v1';
+
+const CHINESE_DAILY_MENUS = [
+  ['早餐：小米粥、白煮蛋、无糖豆浆，配一份苹果。', '午餐：杂粮米饭、清蒸鱼、蒜蓉西兰花，配番茄豆腐汤。', '晚餐：米饭、香菇炖鸡、清炒菠菜。', '可选加餐：原味酸奶或一小把坚果。'],
+  ['早餐：玉米、鸡蛋、牛奶，配一份橙子。', '午餐：米饭、青椒肉丝、清炒小白菜，配紫菜蛋花汤。', '晚餐：红薯、清蒸豆腐、凉拌黄瓜，配一份绿叶菜。', '可选加餐：一份梨或无糖酸奶。'],
+  ['早餐：杂粮馒头、白煮蛋、无糖豆浆，配小番茄。', '午餐：米饭、少油版宫保鸡丁、蒜蓉油麦菜。', '晚餐：荞麦面、香菇豆腐、小白菜，搭配少量瘦肉。', '可选加餐：一份当季水果。'],
+  ['早餐：南瓜小米粥、鸡蛋、牛奶，配一份水果。', '午餐：杂粮饭、番茄炖牛肉、清炒上海青。', '晚餐：米饭、虾仁豆腐、清炒西兰花。', '可选加餐：原味酸奶。'],
+  ['早餐：全麦馒头、鸡蛋、无糖豆浆，配一份苹果。', '午餐：米饭、家常豆腐、芹菜炒瘦肉，搭配绿叶菜；炒菜少油。', '晚餐：杂粮饭、清蒸鲈鱼、清炒菜花。', '可选加餐：一份橙子或梨。'],
+  ['早餐：红薯、白煮蛋、牛奶，配一份当季水果。', '午餐：杂粮饭、番茄炖鸡肉、清炒小白菜。', '晚餐：小米粥、香菇豆腐、凉拌黄瓜，搭配少量主食。', '可选加餐：无糖酸奶或一小把坚果。'],
+  ['早餐：玉米、鸡蛋羹、无糖豆浆，配一份水果。', '午餐：米饭、清蒸鱼、木耳炒山药、清炒青菜。', '晚餐：杂粮饭、西红柿炒蛋、蒜蓉生菜，配一份豆腐。', '可选加餐：牛奶或一份当季水果。']
+];
+
+function chineseMealIdeas(date, goal) {
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
+  const menu = CHINESE_DAILY_MENUS[day % CHINESE_DAILY_MENUS.length];
+  return [...menu, goal
+    ? `份量提示：按你设置的每日 ${Math.round(goal)} 千卡参考值调整主食、烹调油和加餐，并记录实际食用量；菜肴热量会随做法变化。`
+    : '份量提示：按食欲和活动量调整主食、烹调油和加餐，并记录实际食用量；菜肴热量会随做法变化。'];
+}
 
 function chinaDate(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
@@ -64,20 +83,14 @@ function makeReport(date, state) {
   if (number(plan.exercise)) goals.push(`活动目标：${Math.round(number(plan.exercise))} 分钟`);
   if (number(plan.sleep)) goals.push(`睡眠目标：${number(plan.sleep)} 小时`);
   if (!goals.length) goals.push('你还没有设置个人目标。可在“我的健康计划”中填写适合自己的参考值。');
-  const defaultMealIdeas = [
-    '早餐：燕麦或全麦面包，搭配鸡蛋或原味酸奶，再加一份水果。',
-    '午餐：米饭或杂粮，搭配鸡肉、鱼或豆腐，再加足量蔬菜。',
-    '晚餐：蔬菜、豆类或鱼肉，搭配适量主食；按食欲和实际份量记录。'
-  ];
-  const customMealIdeas = typeof plan.mealPlan === 'string' ? plan.mealPlan.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 8) : [];
-  const mealIdeas = customMealIdeas.length ? customMealIdeas : defaultMealIdeas;
-  return { date, yesterday, mealCount: meals.length, totalKcal: total, observations, goals, mealIdeas, generatedAt: new Date().toISOString(), sourceUpdatedAt: state?.updatedAt || null, note: '仅根据已记录的食物名称、热量和个人目标生成，无法判断营养素、盐糖含量或诊断健康问题。饮食建议参考 WHO 和 USDA MyPlate 的一般原则。' };
+  const mealIdeas = chineseMealIdeas(date, goal);
+  return { version: REPORT_VERSION, date, yesterday, mealCount: meals.length, totalKcal: total, observations, goals, mealIdeas, generatedAt: new Date().toISOString(), sourceUpdatedAt: state?.updatedAt || null, note: '仅根据已记录的食物名称、热量和个人目标生成；中式餐食是参考示例，不能据此判断营养素、盐糖含量或诊断健康问题。参考《中国居民膳食指南（2022）》与国家卫生健康委《成人肥胖食养指南（2024年版）》。' };
 }
 async function generateReport(env, date = chinaDate()) {
   const state = await readJson(env.BUCKET, STATE_KEY);
   const key = reportKey(date);
   const prior = await readJson(env.BUCKET, key);
-  if (prior && prior.sourceUpdatedAt === (state?.updatedAt || null)) return prior;
+  if (prior && prior.version === REPORT_VERSION && prior.sourceUpdatedAt === (state?.updatedAt || null)) return prior;
   const report = makeReport(date, state);
   await env.BUCKET.put(key, JSON.stringify(report), { httpMetadata: { contentType: 'application/json' } });
   return report;

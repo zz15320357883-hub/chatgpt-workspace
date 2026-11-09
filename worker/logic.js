@@ -42,6 +42,27 @@ async function readJson(bucket, key) {
   const object = await bucket.get(key);
   return object ? object.json() : null;
 }
+async function syncSleepFromPhone(env) {
+  if (!env.SLEEP_SYNC_URL || !env.SLEEP_SYNC_TOKEN) return;
+  try {
+    const response = await fetch(env.SLEEP_SYNC_URL, { headers: { 'x-sleep-key': env.SLEEP_SYNC_TOKEN } });
+    if (!response.ok) return;
+    const remote = await response.json();
+    const state = await readJson(env.BUCKET, STATE_KEY) || { plan: {}, days: {} };
+    if (!state.days || typeof state.days !== 'object') state.days = {};
+    let changed = false;
+    for (const [date, raw] of Object.entries(remote.days || {})) {
+      const hours = Number(raw);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hours) || hours <= 0 || hours > 24) continue;
+      if (!state.days[date] || typeof state.days[date] !== 'object') state.days[date] = { meals: [], water: 0 };
+      if (state.days[date].sleep !== hours) { state.days[date].sleep = hours; changed = true; }
+    }
+    if (changed) {
+      state.updatedAt = new Date().toISOString();
+      await env.BUCKET.put(STATE_KEY, JSON.stringify(state), { httpMetadata: { contentType: 'application/json' } });
+    }
+  } catch { /* Keep existing records if the phone receiver is temporarily unavailable. */ }
+}
 function number(value) {
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? n : null;
@@ -87,6 +108,7 @@ function makeReport(date, state) {
   return { version: REPORT_VERSION, date, yesterday, mealCount: meals.length, totalKcal: total, observations, goals, mealIdeas, generatedAt: new Date().toISOString(), sourceUpdatedAt: state?.updatedAt || null, note: '仅根据已记录的食物名称、热量和个人目标生成；中式餐食是参考示例，不能据此判断营养素、盐糖含量或诊断健康问题。参考《中国居民膳食指南（2022）》与国家卫生健康委《成人肥胖食养指南（2024年版）》。' };
 }
 async function generateReport(env, date = chinaDate()) {
+  await syncSleepFromPhone(env);
   const state = await readJson(env.BUCKET, STATE_KEY);
   const key = reportKey(date);
   const prior = await readJson(env.BUCKET, key);
@@ -130,13 +152,15 @@ export default {
     if (!request.headers.get('oai-authenticated-user-id')) return responseJson({ error: '请登录后使用云端报告' }, 401);
     if (!env.BUCKET) return responseJson({ error: '云端存储尚未就绪' }, 503);
     try {
-      if (path === '/api/state' && request.method === 'GET') return responseJson(await readJson(env.BUCKET, STATE_KEY));
+      if (path === '/api/sleep-config' && request.method === 'GET') return responseJson({ url: env.SLEEP_SYNC_URL || null, key: env.SLEEP_SYNC_TOKEN || null });
+      if (path === '/api/state' && request.method === 'GET') { await syncSleepFromPhone(env); return responseJson(await readJson(env.BUCKET, STATE_KEY)); }
       if (path === '/api/state' && request.method === 'PUT') {
         const body = await request.text();
         if (body.length > 5_000_000) return responseJson({ error: '记录文件过大' }, 413);
         const state = JSON.parse(body);
         if (!state || typeof state !== 'object' || !state.plan || typeof state.plan !== 'object' || !state.days || typeof state.days !== 'object') return responseJson({ error: '记录格式无效' }, 400);
         await env.BUCKET.put(STATE_KEY, JSON.stringify({ plan: state.plan, days: state.days, updatedAt: state.updatedAt || new Date().toISOString() }), { httpMetadata: { contentType: 'application/json' } });
+        await syncSleepFromPhone(env);
         return responseJson({ ok: true });
       }
       if (path === '/api/report' && request.method === 'GET') return responseJson(await readJson(env.BUCKET, reportKey(chinaDate())));
